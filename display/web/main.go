@@ -162,7 +162,10 @@ func uploadFileRoute(ctx echo.Context) error {
 			slog.Error("Failed to close file", "file", fullPath, "error", fileCloseErr)
 		}
 		if err != nil {
-			os.Remove(fullPath)
+			err = os.Remove(fullPath)
+			if err != nil {
+				slog.Warn("could not remove broken file", "file", fullPath, "error", err)
+			}
 		}
 	}()
 
@@ -280,6 +283,8 @@ func previewRoute(ctx echo.Context) error {
 }
 
 func openWebsiteRoute(ctx echo.Context) error {
+	var err error
+
 	var request struct {
 		URL string `json:"url"`
 	}
@@ -290,7 +295,11 @@ func openWebsiteRoute(ctx echo.Context) error {
 
 	slog.Info("Opening url")
 
-	browser.Browser.OpenPage(request.URL)
+	err = browser.Browser.OpenPage(request.URL)
+	if err != nil {
+		slog.Error("Failed to open website", "url", request.URL, "error", err)
+		return ctx.JSON(http.StatusInternalServerError, shared.ErrorResponse{Description: "Failed to open website"})
+	}
 
 	return ctx.JSON(http.StatusOK, struct{}{})
 }

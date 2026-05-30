@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"image/color"
-	"log/slog"
 	"net"
 	"os"
 	"plg-mudics/shared"
@@ -16,7 +15,7 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
-func OpenStartScreen() {
+func OpenStartScreen() error {
 	var err error
 
 	raw := shared.RawSplashScreenTemplate
@@ -24,11 +23,11 @@ func OpenStartScreen() {
 
 	ip, err := getDeviceIp()
 	if err != nil {
-		slog.Error("Failed to get device IP", "error", err)
+		return fmt.Errorf("get device IP: %w", err)
 	}
 	mac, err := getDeviceMac()
 	if err != nil {
-		slog.Error("Failed to get device MAC address", "error", err)
+		return fmt.Errorf("get device MAC address: %w", err)
 	}
 
 	port := 8080
@@ -37,13 +36,17 @@ func OpenStartScreen() {
 	if showQrCode {
 		qrCodePath, err = generateQRCode(fmt.Sprintf("http://%s:%d", ip, port))
 		if err != nil {
-			slog.Error("could not generate qr code", "error", err)
+			return fmt.Errorf("generate QR code: %w", err)
 		}
 	}
 
 	var templateBuffer bytes.Buffer
-	startScreenTemplate(html, ip, mac, qrCodePath).Render(context.Background(), &templateBuffer)
-	browser.Browser.OpenHTML(templateBuffer.String())
+	_ = startScreenTemplate(html, ip, mac, qrCodePath).Render(context.Background(), &templateBuffer)
+	err = browser.Browser.OpenHTML(templateBuffer.String())
+	if err != nil {
+		return fmt.Errorf("open start screen in browser: %w", err)
+	}
+	return nil
 }
 
 func getDeviceIp() (string, error) {
@@ -106,7 +109,7 @@ func generateQRCode(data string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not save qr code: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	_, err = file.Write(png)
 	if err != nil {

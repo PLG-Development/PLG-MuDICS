@@ -83,7 +83,7 @@ func ShowHTML(html string) error {
 	ResetView()
 
 	var templateBuffer bytes.Buffer
-	htmlTemplate(html).Render(context.Background(), &templateBuffer)
+	_ = htmlTemplate(html).Render(context.Background(), &templateBuffer)
 	err := browser.Browser.OpenHTML(templateBuffer.String())
 
 	return err

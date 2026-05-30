@@ -42,8 +42,12 @@ func (b *BrowserType) Init() error {
 	return nil
 }
 
-func (b *BrowserType) OpenPage(url string) {
-	chromedp.Run(b.Ctx, chromedp.Navigate(url))
+func (b *BrowserType) OpenPage(url string) error {
+	err := chromedp.Run(b.Ctx, chromedp.Navigate(url))
+	if err != nil {
+		return fmt.Errorf("navigate to URL: %w", err)
+	}
+	return nil
 }
 
 // Yes, we need that trick with creating a temp file and not directly sending html since
@@ -55,18 +59,25 @@ func (b *BrowserType) OpenHTML(html string) error {
 	if err != nil {
 		return fmt.Errorf("could not create tempfile: %w", err)
 	}
-	defer tempFile.Close()
+	defer func() { _ = tempFile.Close() }()
 
 	_, err = tempFile.WriteString(html)
 	if err != nil {
 		return fmt.Errorf("could not write to tempfile: %w", err)
 	}
 
-	chromedp.Run(b.Ctx, chromedp.Navigate("file://"+tempFile.Name()))
+	err = chromedp.Run(b.Ctx, chromedp.Navigate("file://"+tempFile.Name()))
+	if err != nil {
+		return fmt.Errorf("navigate to URL: %w", err)
+	}
 
 	return nil
 }
 
-func (b *BrowserType) OpenPDF(path string) {
-	b.OpenPage("file://" + path + "#toolbar=0&view=Fit")
+func (b *BrowserType) OpenPDF(path string) error {
+	err := b.OpenPage("file://" + path + "#toolbar=0&view=Fit")
+	if err != nil {
+		return fmt.Errorf("open PDF: %w", err)
+	}
+	return nil
 }

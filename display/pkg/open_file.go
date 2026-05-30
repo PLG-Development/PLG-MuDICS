@@ -27,24 +27,28 @@ func OpenFile(path string) error {
 
 	mType, err := mimetype.DetectFile(path)
 	if err != nil {
-		slog.Error("Failed to detect mime type", "file", path, "error", err)
+		return fmt.Errorf("detect mime type of file %q: %w", path, err)
 	}
 
 	switch mType.String() {
 	case "video/mp4":
 		var templateBuffer bytes.Buffer
-		videoTemplate(path).Render(context.Background(), &templateBuffer)
-		browser.Browser.OpenHTML(templateBuffer.String())
+		_ = videoTemplate(path).Render(context.Background(), &templateBuffer)
+		err = browser.Browser.OpenHTML(templateBuffer.String())
 	case "image/jpeg", "image/png", "image/gif":
 		var templateBuffer bytes.Buffer
-		imageTemplate(path).Render(context.Background(), &templateBuffer)
-		browser.Browser.OpenHTML(templateBuffer.String())
+		_ = imageTemplate(path).Render(context.Background(), &templateBuffer)
+		err = browser.Browser.OpenHTML(templateBuffer.String())
 	case "application/pdf":
-		browser.Browser.OpenPDF(path)
+		err = browser.Browser.OpenPDF(path)
 	case "application/vnd.openxmlformats-officedocument.presentationml.presentation", "application/vnd.oasis.opendocument.presentation":
 		err = fileHandler.openFileWithApp(path)
 	default:
 		return fmt.Errorf("unsupported file type: %s", mType.String())
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to open file: %w", err)
 	}
 
 	return nil
